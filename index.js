@@ -8,58 +8,151 @@ const dburl = "mongodb://localhost:27017";
 app.use(exp.static(__dirname + "/public"));
 app.use(parse.json());
 
-app.post("/user/getUserInfo", function (req, res) {
+app.post("/api/user/getUserInfo", function (req, res) {
   if (req.body.userId) {
-    MongoClient.connect(dburl, {
-      useNewUrlParser: true
-    }, function (err, client) {
-      if (err) {
-        console.log(err);
-        return;
-      }
-      const userInfo = client.db("userInfo");
-      userInfo.collection("users").find({
-        uid: req.body.userId
-      }).toArray(function (err, resData) {
-        console.log(resData);
+    MongoClient.connect(
+      dburl,
+      {
+        useNewUrlParser: true,
+      },
+      function (err, client) {
         if (err) {
-          // console.log(err);
+          console.log(err);
+          res.send({
+            status: 500,
+            success: false,
+            code: 0,
+            //未知错误
+          });
           return;
         }
-        res.send({
-          status: 200,
-          success: true,
-          data: resData[0]
-        });
-      });
-      client.close();
-    });
+        const userInfo = client.db("userInfo");
+        userInfo
+          .collection("users")
+          .find({
+            uid: req.body.userId,
+          })
+          .toArray(function (err, resData) {
+            console.log(resData);
+            if (err) {
+              console.log(err);
+              res.send({
+                status: 500,
+                success: false,
+                code: 0,
+                //未知错误
+              });
+              return;
+            }
+            if (resData.length === 0) {
+              res.send({
+                status: 500,
+                success: false,
+                code: 2,
+                //无法获取用户信息，请重新登录！
+              });
+            }
+            res.send({
+              status: 200,
+              success: true,
+              data: resData[0],
+            });
+          });
+        client.close();
+      }
+    );
   } else {
     res.send({
       status: 500,
       success: false,
-      code: 1
+      code: 1,
       //身份过期请重新登录
-    })
-    return
+    });
+    return;
   }
 });
-
-app.post("/user/register", function (req, res) {
+app.post("/api/user/register", function (req, res) {
   let data = req.body;
-  MongoClient.connect(dburl, {
-    useNewUrlParser: true
-  }, function (err, client) {
-    if (err) {
-      console.log(err);
-      return;
-    }
-    console.log("连接成功！");
-    const userInfo = client.db("userInfo");
-    //   test.createCollection("userInfo");
-    userInfo.collection("users").insertOne(
-      data,
-      function (err, resData) {
+  if (data.userName === "" || !data.userName) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 1,
+      // 用户名不能为空
+    });
+    return;
+  }
+  if (data.userName.length < 4) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 2,
+      // 用户名不能少于4位
+    });
+    return;
+  }
+  if (data.userName.length > 20) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 3,
+      // 用户名不能多余20位
+    });
+    return;
+  }
+  if (data.password === "" || !data.password) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 6,
+      // 密码不能为空
+    });
+    return;
+  }
+  MongoClient.connect(
+    dburl,
+    {
+      useNewUrlParser: true,
+    },
+    function (err, client) {
+      if (err) {
+        console.log(err);
+        res.send({
+          status: 500,
+          success: false,
+          code: 0,
+          //未知错误
+        });
+        return;
+      }
+      const userInfo = client.db("userInfo");
+      userInfo
+        .collection("users")
+        .find({
+          userName: req.body.userName,
+        })
+        .toArray(function (err, resData) {
+          if (err) {
+            console.log(err);
+            res.send({
+              status: 500,
+              success: false,
+              code: 0,
+              //未知错误
+            });
+            return;
+          }
+          if (resData.length !== 0) {
+            res.send({
+              status: 500,
+              success: false,
+              code: 5,
+              // 用户名已存在
+            });
+            return;
+          }
+        });
+      userInfo.collection("users").insertOne(data, function (err, resData) {
         if (err) {
           console.log(err);
           return;
@@ -67,17 +160,113 @@ app.post("/user/register", function (req, res) {
         res.send({
           status: 200,
           success: true,
-          data: resData.ops[0]
+          data: resData.ops[0],
         });
         console.log(resData);
-
-      }
-    );
-    client.close();
-  });
-
+      });
+      client.close();
+    }
+  );
 });
-
+app.post("/api/user/login", function (req, res) {
+  let data = req.body;
+  if (data.userName === "" || !data.userName) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 1,
+      // 用户名不能为空
+    });
+    return;
+  }
+  if (data.password === "" || !data.password) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 3,
+      // 密码不能为空
+    });
+    return;
+  }
+  MongoClient.connect(
+    dburl,
+    {
+      useNewUrlParser: true,
+    },
+    function (err, client) {
+      if (err) {
+        console.log(err);
+        return;
+      }
+      console.log("连接成功！");
+      const userInfo = client.db("userInfo");
+      if (data.userName.indexOf("@") !== -1) {
+        userInfo
+          .collection("users")
+          .find({
+            email: data.userName,
+          })
+          .toArray(function (err, resData) {
+            console.log(resData);
+            if (resData.length === 0) {
+              res.send({
+                status: 500,
+                success: false,
+                code: 2,
+                // 用户名或邮箱错误
+              });
+              return;
+            }
+            if (resData[0].password !== data.password) {
+              res.send({
+                status: 500,
+                success: false,
+                code: 4,
+                // 密码错误！
+              });
+              return;
+            }
+            res.send({
+              status: 200,
+              success: true,
+              data: resData,
+            });
+          });
+      } else {
+        userInfo
+          .collection("users")
+          .find({
+            userName: data.userName,
+          })
+          .toArray(function (err, resData) {
+            if (resData.length === 0) {
+              res.send({
+                status: 500,
+                success: false,
+                code: 2,
+                // 用户名或邮箱错误
+              });
+              return;
+            }
+            if (resData[0].password !== data.password) {
+              res.send({
+                status: 500,
+                success: false,
+                code: 4,
+                // 密码错误！
+              });
+              return;
+            }
+            res.send({
+              status: 200,
+              success: true,
+              data: resData,
+            });
+          });
+      }
+    }
+  );
+});
 app.listen(3000, function (err) {
   if (err) {
     console.log(err);
