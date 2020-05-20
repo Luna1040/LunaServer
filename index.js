@@ -3,6 +3,7 @@ const parse = require("body-parser");
 const mg = require("mongodb");
 const MongoClient = require("mongodb").MongoClient;
 const app = exp();
+// const dburl = "mongodb://23.234.241.244:27017";
 const dburl = "mongodb://localhost:27017";
 // exp.static方法告诉服务器静态文件在哪里
 app.use(exp.static(__dirname + "/public"));
@@ -17,7 +18,6 @@ app.post("/api/user/getUserInfo", function (req, res) {
       },
       function (err, client) {
         if (err) {
-          console.log(err);
           res.send({
             status: 500,
             success: false,
@@ -52,6 +52,7 @@ app.post("/api/user/getUserInfo", function (req, res) {
                 //无法获取用户信息，请重新登录！
               });
             }
+            delete resData[0].password;
             res.send({
               status: 200,
               success: true,
@@ -157,6 +158,7 @@ app.post("/api/user/register", function (req, res) {
           console.log(err);
           return;
         }
+        delete resData[0].password;
         res.send({
           status: 200,
           success: true,
@@ -226,6 +228,7 @@ app.post("/api/user/login", function (req, res) {
               });
               return;
             }
+            delete resData[0].password;
             res.send({
               status: 200,
               success: true,
