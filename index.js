@@ -12,8 +12,7 @@ app.use(parse.json());
 app.post("/api/user/getUserInfo", function (req, res) {
   if (req.body.userId) {
     MongoClient.connect(
-      dburl,
-      {
+      dburl, {
         useNewUrlParser: true,
       },
       function (err, client) {
@@ -111,8 +110,7 @@ app.post("/api/user/register", function (req, res) {
     return;
   }
   MongoClient.connect(
-    dburl,
-    {
+    dburl, {
       useNewUrlParser: true,
     },
     function (err, client) {
@@ -191,8 +189,7 @@ app.post("/api/user/login", function (req, res) {
     return;
   }
   MongoClient.connect(
-    dburl,
-    {
+    dburl, {
       useNewUrlParser: true,
     },
     function (err, client) {
@@ -270,6 +267,58 @@ app.post("/api/user/login", function (req, res) {
     }
   );
 });
+app.post('/api/user/addTodoList', function (req, res) {
+  let data = req.body;
+  if (!data.uid) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 1
+      //无法获取uid
+    })
+    return
+  }
+  if (!data.list) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 2,
+      //无法获取todoList
+    })
+    return
+  }
+  MongoClient.connect(
+    dburl, {
+      useNewUrlParser: true,
+    },
+    function (err, client) {
+      if (err) {
+        res.send({
+          status: 500,
+          success: false,
+          code: 0,
+          //未知错误
+        });
+        return;
+      }
+      const todoList = client.db("todoList");
+      todoList.collection(data.uid).push(data.list)
+      if (err) {
+        res.send({
+          status: 500,
+          success: false,
+          code: 0,
+          //未知错误
+        });
+        return;
+      }
+      res.send({
+        status: 200,
+        success: true
+      })
+    }
+  );
+})
 app.listen(3000, function (err) {
   if (err) {
     console.log(err);
