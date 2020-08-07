@@ -4,7 +4,7 @@ const mg = require("mongodb");
 const MongoClient = require("mongodb").MongoClient;
 const app = exp();
 // const dburl = "mongodb://23.234.241.244:27017";
-const dburl = "mongodb://localhost:27017";
+const dburl = "mongodb://127.0.0.1:27017";
 // exp.static方法告诉服务器静态文件在哪里
 app.use(exp.static(__dirname + "/public"));
 app.use(parse.json());
@@ -73,6 +73,7 @@ app.post("/api/user/getUserInfo", function (req, res) {
 });
 app.post("/api/user/register", function (req, res) {
   let data = req.body;
+  console.log(data);
   if (data.userName === "" || !data.userName) {
     res.send({
       status: 500,
@@ -153,10 +154,9 @@ app.post("/api/user/register", function (req, res) {
         });
       userInfo.collection("users").insertOne(data, function (err, resData) {
         if (err) {
-          console.log(err);
           return;
         }
-        delete resData[0].password;
+        delete resData.ops[0].password;
         res.send({
           status: 200,
           success: true,
@@ -267,7 +267,7 @@ app.post("/api/user/login", function (req, res) {
     }
   );
 });
-app.post('/api/user/addTodoList', function (req, res) {
+app.post('/api/home/addTodoList', function (req, res) {
   let data = req.body;
   if (!data.uid) {
     res.send({
@@ -278,7 +278,7 @@ app.post('/api/user/addTodoList', function (req, res) {
     })
     return
   }
-  if (!data.list) {
+  if (!data.content) {
     res.send({
       status: 500,
       success: false,
@@ -302,23 +302,24 @@ app.post('/api/user/addTodoList', function (req, res) {
         return;
       }
       const todoList = client.db("todoList");
-      todoList.collection(data.uid).push(data.list)
-      if (err) {
+      todoList.collection(data.uid).insertOne(data, function (err, resData) {
+        if (err) {
+          res.send({
+            status: 500,
+            success: false,
+            code: 0,
+            //未知错误
+          });
+          return;
+        }
         res.send({
-          status: 500,
-          success: false,
-          code: 0,
-          //未知错误
-        });
-        return;
-      }
-      res.send({
-        status: 200,
-        success: true
+          status: 200,
+          success: true
+        })
       })
     }
   );
-})
+});
 app.listen(3000, function (err) {
   if (err) {
     console.log(err);
