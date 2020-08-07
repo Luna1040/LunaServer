@@ -320,6 +320,36 @@ app.post('/api/home/addTodoList', function (req, res) {
     }
   );
 });
+app.post('/api/home/getTodoList', function (req, res) {
+  let data = req.body;
+  if (!data.uid) {
+    res.send({
+      status: 500,
+      success: false,
+      code: 1
+      //无法获取uid
+    })
+    return
+  }
+  MongoClient.connect(
+    dburl, {
+      useNewUrlParser: true,
+    },
+    function (err, client) {
+      if (err) {
+        res.send({
+          status: 500,
+          success: false,
+          code: 0,
+          //未知错误
+        });
+        return;
+      }
+      const todoList = client.db("todoList");
+      console.log(todoList.collection(data.uid).find())
+    }
+  );
+});
 app.listen(3000, function (err) {
   if (err) {
     console.log(err);
