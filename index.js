@@ -345,8 +345,24 @@ app.post('/api/home/getTodoList', function (req, res) {
         });
         return;
       }
+      let uid = data.uid
       const todoList = client.db("todoList");
-      console.log(todoList.collection(data.uid).find())
+      todoList.collection(uid).find().toArray(function (err, resData) {
+        if (err) {
+          res.send({
+            status: 500,
+            success: false,
+            code: 0,
+            //未知错误
+          });
+          return;
+        }
+        res.send({
+          status: 200,
+          success: true,
+          data: resData
+        })
+      })
     }
   );
 });
