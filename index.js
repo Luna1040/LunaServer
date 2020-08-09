@@ -302,6 +302,19 @@ app.post('/api/home/addTodoList', function (req, res) {
         return;
       }
       const todoList = client.db("todoList");
+      todoList.collection(data.uid).find().toArray(function (err, resData) {
+        for (let i = 0; i < resData.length; i++) {
+          if(resData[i].id === data.id) {
+            res.send({
+              status: 500,
+              success: false,
+              code: 3,
+              //ID重复
+            });
+            return
+          }
+        }
+      })
       todoList.collection(data.uid).insertOne(data, function (err, resData) {
         if (err) {
           res.send({
@@ -357,6 +370,9 @@ app.post('/api/home/getTodoList', function (req, res) {
           });
           return;
         }
+        resData.forEach((item, index) => {
+          delete resData[index]._id
+        })
         res.send({
           status: 200,
           success: true,
