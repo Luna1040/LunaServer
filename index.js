@@ -2,6 +2,7 @@ const exp = require("express");
 const parse = require("body-parser");
 const mg = require("mongodb");
 const MongoClient = require("mongodb").MongoClient;
+const ws = require('nodejs-websocket')
 const app = exp();
 // const dburl = "mongodb://23.234.241.244:27017";
 const dburl = "mongodb://127.0.0.1:27017";
@@ -389,3 +390,23 @@ app.listen(3000, function (err) {
   }
   console.log("服务已启动");
 });
+
+var game1 = null,game2 = null , game1Ready = false , game2Ready = false;
+var server = ws.createServer(function(conn){
+    conn.on("text", function (str) {
+        conn.send(str)
+        boardcast(str)
+    })
+    conn.on("close", function (code, reason) {
+        console.log("关闭连接")
+    });
+    conn.on("error", function (code, reason) {
+        console.log("异常关闭")
+    });
+}).listen(3001)
+
+function boardcast(str){
+  server.connections.forEach((conn)=>{
+      conn.sendText(str);
+  });
+}
