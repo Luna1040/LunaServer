@@ -484,16 +484,18 @@ app.post('/api/home/addProject', function (req, res) {
             }
         })
         let params = {
-            creatorID: data.uid,
-            creatorName: '1',
-            createTime: Date.parse(new Date()),
+            creatorID: data.creatorID,
+            creatorName: data.creatorName,
             id: data.id,
             projectName: data.projectName,
-            finished: 0,
             important: data.important,
-            todoList: [],
             projectMember: data.projectMember,
-            projectOwner: data.projectOwner,
+            projectOwnerID: data.projectOwnerID,
+            projectOwnerName: data.projectOwnerName,
+            // 以下非前端传输字段
+            createTime: Date.parse(new Date()),
+            finished: 0,
+            todoList: [],
             lastUpdatedTime: '--'
         }
         project.collection('projectList').insertOne(params, function (err, resData) {
