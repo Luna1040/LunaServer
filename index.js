@@ -351,10 +351,11 @@ app.post("/api/user/login", function (req, res) {
                         });
                         return;
                     }
+                    delete resData[0].password
                     res.send({
                         status: 200,
                         success: true,
-                        data: resData,
+                        data: resData[0],
                     });
                 });
         }
@@ -435,6 +436,227 @@ app.post("/api/user/login", function (req, res) {
     //           });
     //         });
     //     }
+    //   }
+    // );
+});
+app.post('/api/home/addProject', function (req, res) {
+    let data = req.body;
+    if (!data.uid) {
+        res.send({
+            status: 500,
+            success: false,
+            code: 1
+            //无法获取uid，初始化创建人失败
+        })
+        return
+    }
+    client.connect(err => {
+        if (err) {
+            res.send({
+                status: 500,
+                success: false,
+                code: 0,
+                //未知错误
+            });
+            return;
+        }
+        const project = client.db("project");
+        project.collection('projectList').find().toArray(function (err, resData) {
+            for (let i = 0; i < resData.length; i++) {
+                if (resData[i].id === data.id) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 2,
+                        //项目ID重复
+                    });
+                    return
+                }
+                if (resData[i].projectName === data.projectName) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 3,
+                        //已有的项目名称
+                    });
+                    return
+                }
+            }
+        })
+        let params = {
+            creatorID: data.uid,
+            creatorName: '1',
+            createTime: Date.parse(new Date()),
+            id: data.id,
+            projectName: data.projectName,
+            finished: 0,
+            important: data.important,
+            todoList: [],
+            projectMember: data.projectMember,
+            projectOwner: data.projectOwner,
+            lastUpdatedTime: '--'
+        }
+        project.collection('projectList').insertOne(params, function (err, resData) {
+            if (err) {
+                res.send({
+                    status: 500,
+                    success: false,
+                    code: 0,
+                    //未知错误
+                });
+                return;
+            }
+            res.send({
+                status: 200,
+                success: true
+            })
+        })
+    })
+    //   MongoClient.connect(
+    //   dburl, {
+    //     useNewUrlParser: true,
+    //   },
+    //   function (err, client) {
+    //     if (err) {
+    //       res.send({
+    //         status: 500,
+    //         success: false,
+    //         code: 0,
+    //         //未知错误
+    //       });
+    //       return;
+    //     }
+    //     const todoList = client.db("todoList");
+    //     todoList.collection(data.uid).find().toArray(function (err, resData) {
+    //       for (let i = 0; i < resData.length; i++) {
+    //         if(resData[i].id === data.id) {
+    //           res.send({
+    //             status: 500,
+    //             success: false,
+    //             code: 3,
+    //             //ID重复
+    //           });
+    //           return
+    //         }
+    //       }
+    //     })
+    //     todoList.collection(data.uid).insertOne(data, function (err, resData) {
+    //       if (err) {
+    //         res.send({
+    //           status: 500,
+    //           success: false,
+    //           code: 0,
+    //           //未知错误
+    //         });
+    //         return;
+    //       }
+    //       res.send({
+    //         status: 200,
+    //         success: true
+    //       })
+    //     })
+    //   }
+    // );
+});
+app.post('/api/home/getProjectList', function (req, res) {
+    let data = req.body;
+    if (!data.uid) {
+        res.send({
+            status: 500,
+            success: false,
+            code: 1
+            //无法获取uid，权限验证失败
+        })
+        return
+    }
+    client.connect(err => {
+        if (err) {
+            res.send({
+                status: 500,
+                success: false,
+                code: 0,
+                //未知错误
+            });
+            return;
+        }
+        const todoList = client.db("todoList");
+        todoList.collection(data.uid).find().toArray(function (err, resData) {
+            for (let i = 0; i < resData.length; i++) {
+                if (resData[i].id === data.id) {
+                    res.send({
+                        status: 200,
+                        success: true,
+                        data: resData[i]
+                    });
+                    return
+                }
+            }
+            res.send({
+                status: 500,
+                success: false,
+                code: 2,
+                // 未找到所查询的项目
+            })
+        })
+        todoList.collection(data.uid).insertOne(data, function (err, resData) {
+            if (err) {
+                res.send({
+                    status: 500,
+                    success: false,
+                    code: 0,
+                    //未知错误
+                });
+                return;
+            }
+            res.send({
+                status: 200,
+                success: true
+            })
+        })
+    })
+    //   MongoClient.connect(
+    //   dburl, {
+    //     useNewUrlParser: true,
+    //   },
+    //   function (err, client) {
+    //     if (err) {
+    //       res.send({
+    //         status: 500,
+    //         success: false,
+    //         code: 0,
+    //         //未知错误
+    //       });
+    //       return;
+    //     }
+    //     const todoList = client.db("todoList");
+    //     todoList.collection(data.uid).find().toArray(function (err, resData) {
+    //       for (let i = 0; i < resData.length; i++) {
+    //         if(resData[i].id === data.id) {
+    //           res.send({
+    //             status: 500,
+    //             success: false,
+    //             code: 3,
+    //             //ID重复
+    //           });
+    //           return
+    //         }
+    //       }
+    //     })
+    //     todoList.collection(data.uid).insertOne(data, function (err, resData) {
+    //       if (err) {
+    //         res.send({
+    //           status: 500,
+    //           success: false,
+    //           code: 0,
+    //           //未知错误
+    //         });
+    //         return;
+    //       }
+    //       res.send({
+    //         status: 200,
+    //         success: true
+    //       })
+    //     })
     //   }
     // );
 });
