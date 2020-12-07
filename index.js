@@ -3,6 +3,8 @@ const parse = require("body-parser");
 const mg = require("mongodb");
 const MongoClient = require("mongodb").MongoClient;
 const ws = require('nodejs-websocket')
+const multer  = require('multer')
+const fs = require('fs');
 const app = exp();
 const uri = "mongodb+srv://LunaLovegood:Luna1040@realmcluster.2vupt.mongodb.net/RealmCluster?retryWrites=true&w=majority";
 const client = new MongoClient(uri, {useNewUrlParser: true});
@@ -495,6 +497,38 @@ app.post('/api/home/getTodoList', function (req, res) {
             })
         })
     })
+});
+const createFolder = function(folder){
+    try{
+        fs.accessSync(folder);
+    }catch(e){
+        fs.mkdirSync(folder);
+    }
+};
+
+const uploadFolder = './public/res/'
+
+createFolder(uploadFolder);
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadFolder);    // 保存的路径，备注：需要自己创建
+    },
+    filename: function (req, file, cb) {
+        // 将保存文件名设置为 字段名 + 时间戳，比如 logo-1478521468943
+        cb(null, 'Luna' + Date.now() + '.' + file.originalname.split('.')[file.originalname.split('.').length - 1]);
+    }
+});
+const upload = multer({ storage: storage});
+
+app.post('/upload', upload.single('logo'), function(req, res, next){
+    const file = req.file;
+    res.send({success: true, url: 'https://lunagarden.net/res/'+file.filename});
+});
+
+app.get('/form', function(req, res, next){
+    var form = fs.readFileSync('./form.html', {encoding: 'utf8'});
+    res.send(form);
 });
 app.listen(3000, function (err) {
     if (err) {
