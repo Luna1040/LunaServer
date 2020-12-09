@@ -14,27 +14,196 @@ app.use(parse.json());
 
 // 已验证大多数情况
 app.post("/api/user/getUserInfo", function (req, res) {
-    if (req.body.userId) {
+    if (req.body.company === "" || !req.body.company) {
+        return res.send({
+            status: 500,
+            success: false,
+            code: 19,
+            // 用户名不能为空
+        });
+    } else {
         client.connect(err => {
             if (err) {
-                res.send({
+                return res.send({
                     status: 500,
                     success: false,
                     code: 0,
                     //未知错误
                 });
-                return;
             }
-            const userInfo = client.db("userInfo");
-            userInfo
-                .collection("users")
-                .find({
-                    uid: req.body.userId,
-                })
-                .toArray(function (err, resData) {
-                    console.log(resData);
+            const companyList = client.db("company");
+            companyList.collection("lists").find({id: req.body.company}).toArray(function (err, resData) {
+                if (err) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 0,
+                        //未知错误
+                    });
+                    return;
+                }
+                if (resData.length === 0) {
+
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 19,
+                        //您选择的公司已被封禁
+                    })
+                    return;
+                }
+                if (resData[0].status === 0) {
+                    return res.send({
+                        status: 500,
+                        success: false,
+                        code: 20,
+                        //您选择的公司仍在审核中
+                    })
+                }
+                if (req.body.userId) {
+                    client.connect(err => {
+                        if (err) {
+                            res.send({
+                                status: 500,
+                                success: false,
+                                code: 0,
+                                //未知错误
+                            });
+                            return;
+                        }
+                        const userInfo = client.db("userInfo");
+                        userInfo
+                            .collection(req.body.company)
+                            .find({
+                                uid: req.body.userId,
+                            })
+                            .toArray(function (err, resData) {
+                                if (err) {
+                                    res.send({
+                                        status: 500,
+                                        success: false,
+                                        code: 0,
+                                        //未知错误
+                                    });
+                                    return;
+                                }
+                                if (resData.length === 0) {
+                                    res.send({
+                                        status: 500,
+                                        success: false,
+                                        code: 2,
+                                        //无法获取用户信息，请重新登录！
+                                    });
+                                }
+                                delete resData[0].password;
+                                res.send({
+                                    status: 200,
+                                    success: true,
+                                    data: resData[0],
+                                });
+                            });
+                        client.close();
+                    });
+                } else {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 1,
+                        //身份过期请重新登录
+                    });
+                    return;
+                }
+            })
+        })
+    }
+});
+// 已验证大多数情况
+app.post("/api/user/register", function (req, res) {
+    let data = req.body;
+    if (data.company === "" || !data.company) {
+        return res.send({
+            status: 500,
+            success: false,
+            code: 19,
+            // 用户名不能为空
+        });
+    } else {
+        client.connect(err => {
+            if (err) {
+                return res.send({
+                    status: 500,
+                    success: false,
+                    code: 0,
+                    //未知错误
+                });
+            }
+            const companyList = client.db("company");
+            companyList.collection("lists").find({id: req.body.company}).toArray(function (err, resData) {
+                if (err) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 0,
+                        //未知错误
+                    });
+                    return;
+                }
+                if(resData.length === 0) {
+
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 19,
+                        //您选择的公司已被封禁
+                    })
+                    return;
+                }
+                if(resData[0].status === 0) {
+                    return res.send({
+                        status: 500,
+                        success: false,
+                        code: 20,
+                        //您选择的公司仍在审核中
+                    })
+                }
+                if (data.userName === "" || !data.userName) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 1,
+                        // 用户名不能为空
+                    });
+                    return;
+                }
+                if (data.userName.length < 4) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 2,
+                        // 用户名不能少于4位
+                    });
+                    return;
+                }
+                if (data.userName.length > 20) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 3,
+                        // 用户名不能多余20位
+                    });
+                    return;
+                }
+                if (data.password === "" || !data.password) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 6,
+                        // 密码不能为空
+                    });
+                    return;
+                }
+                client.connect(err => {
                     if (err) {
-                        console.log(err);
                         res.send({
                             status: 500,
                             success: false,
@@ -43,221 +212,198 @@ app.post("/api/user/getUserInfo", function (req, res) {
                         });
                         return;
                     }
-                    if (resData.length === 0) {
-                        res.send({
-                            status: 500,
-                            success: false,
-                            code: 2,
-                            //无法获取用户信息，请重新登录！
+                    const userInfo = client.db("userInfo");
+                    userInfo.collection(data.company).find({userName: req.body.userName,}).toArray(function (err, resData) {
+                        if (err) {
+                            res.send({
+                                status: 500,
+                                success: false,
+                                code: 0,
+                                //未知错误
+                            });
+                            return;
+                        }
+                        for (let i = 0; i < resData.length; i++) {
+                            if (resData[i].userName === data.userName) {
+                                res.send({
+                                    status: 500,
+                                    success: false,
+                                    code: 5,
+                                    // 用户名已存在
+                                });
+                                return;
+                            }
+                        }
+                        userInfo.collection(data.company).insertOne(data, function (err, resData) {
+                            if (err) {
+                                res.send({
+                                    status: 500,
+                                    success: false,
+                                    code: 0,
+                                    //未知错误
+                                });
+                                return;
+                            }
+                            delete resData.ops[0].password;
+                            return res.send({
+                                status: 200,
+                                success: true,
+                                data: resData.ops[0],
+                            });
                         });
-                    }
-                    delete resData[0].password;
-                    res.send({
-                        status: 200,
-                        success: true,
-                        data: resData[0],
-                    });
-                });
-            client.close();
-        });
-    } else {
-        res.send({
-            status: 500,
-            success: false,
-            code: 1,
-            //身份过期请重新登录
-        });
-        return;
+                    })
+                })
+            })
+        })
     }
 });
 // 已验证大多数情况
-app.post("/api/user/register", function (req, res) {
+app.post("/api/user/login", function (req, res) {
     let data = req.body;
-    if (data.userName === "" || !data.userName) {
-        res.send({
+    if (data.company === "" || !data.company) {
+        return res.send({
             status: 500,
             success: false,
-            code: 1,
+            code: 19,
             // 用户名不能为空
         });
-        return;
-    }
-    if (data.userName.length < 4) {
-        res.send({
-            status: 500,
-            success: false,
-            code: 2,
-            // 用户名不能少于4位
-        });
-        return;
-    }
-    if (data.userName.length > 20) {
-        res.send({
-            status: 500,
-            success: false,
-            code: 3,
-            // 用户名不能多余20位
-        });
-        return;
-    }
-    if (data.password === "" || !data.password) {
-        res.send({
-            status: 500,
-            success: false,
-            code: 6,
-            // 密码不能为空
-        });
-        return;
-    }
-    client.connect(err => {
-        if (err) {
-            console.log(err);
-            res.send({
-                status: 500,
-                success: false,
-                code: 0,
-                //未知错误
-            });
-            return;
-        }
-        const userInfo = client.db("userInfo");
-        userInfo.collection("users").find({userName: req.body.userName,}).toArray(function (err, resData) {
+    } else {
+        client.connect(err => {
             if (err) {
-                res.send({
+                return res.send({
                     status: 500,
                     success: false,
                     code: 0,
                     //未知错误
                 });
-                return;
             }
-            for (let i = 0; i < resData.length; i++) {
-                if (resData[i].userName === data.userName) {
+            const companyList = client.db("company");
+            companyList.collection("lists").find({id: req.body.company}).toArray(function (err, resData) {
+                if (err) {
                     res.send({
                         status: 500,
                         success: false,
-                        code: 5,
-                        // 用户名已存在
+                        code: 0,
+                        //未知错误
                     });
                     return;
                 }
-            }
-            userInfo.collection("users").insertOne(data, function (err, resData) {
-                if (err) {
+                if (resData.length === 0) {
+
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 19,
+                        //您选择的公司已被封禁
+                    })
                     return;
                 }
-                delete resData.ops[0].password;
-                res.send({
-                    status: 200,
-                    success: true,
-                    data: resData.ops[0],
-                });
-                console.log(resData);
-            });
+                if (resData[0].status === 0) {
+                    return res.send({
+                        status: 500,
+                        success: false,
+                        code: 20,
+                        //您选择的公司仍在审核中
+                    })
+                }
+                if (data.userName === "" || !data.userName) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 1,
+                        // 用户名不能为空
+                    });
+                    return;
+                }
+                if (data.password === "" || !data.password) {
+                    res.send({
+                        status: 500,
+                        success: false,
+                        code: 3,
+                        // 密码不能为空
+                    });
+                    return;
+                }
+                client.connect(err => {
+                    if (err) {
+                        res.send({
+                            status: 500,
+                            success: false,
+                            code: 0,
+                            //未知错误
+                        });
+                        return;
+                    }
+                    const userInfo = client.db("userInfo");
+                    if (data.userName.indexOf("@") !== -1) {
+                        userInfo
+                            .collection(data.company)
+                            .find({
+                                email: data.userName,
+                            })
+                            .toArray(function (err, resData) {
+                                if (resData.length === 0) {
+                                    res.send({
+                                        status: 500,
+                                        success: false,
+                                        code: 2,
+                                        // 用户名或邮箱错误
+                                    });
+                                    return;
+                                }
+                                if (resData[0].password !== data.password) {
+                                    res.send({
+                                        status: 500,
+                                        success: false,
+                                        code: 4,
+                                        // 密码错误！
+                                    });
+                                    return;
+                                }
+                                delete resData[0].password;
+                                res.send({
+                                    status: 200,
+                                    success: true,
+                                    data: resData,
+                                });
+                            });
+                    } else {
+                        userInfo
+                            .collection(data.company)
+                            .find({
+                                userName: data.userName,
+                            })
+                            .toArray(function (err, resData) {
+                                if (resData.length === 0) {
+                                    res.send({
+                                        status: 500,
+                                        success: false,
+                                        code: 2,
+                                        // 用户名或邮箱错误
+                                    });
+                                    return;
+                                }
+                                if (resData[0].password !== data.password) {
+                                    res.send({
+                                        status: 500,
+                                        success: false,
+                                        code: 4,
+                                        // 密码错误！
+                                    });
+                                    return;
+                                }
+                                delete resData[0].password
+                                res.send({
+                                    status: 200,
+                                    success: true,
+                                    data: resData[0],
+                                });
+                            });
+                    }
+                })
+            })
         })
-    })
-});
-// 已验证大多数情况
-app.post("/api/user/login", function (req, res) {
-    let data = req.body;
-    if (data.userName === "" || !data.userName) {
-        res.send({
-            status: 500,
-            success: false,
-            code: 1,
-            // 用户名不能为空
-        });
-        return;
     }
-    if (data.password === "" || !data.password) {
-        res.send({
-            status: 500,
-            success: false,
-            code: 3,
-            // 密码不能为空
-        });
-        return;
-    }
-    client.connect(err => {
-        if (err) {
-            console.log(err);
-            res.send({
-                status: 500,
-                success: false,
-                code: 0,
-                //未知错误
-            });
-            return;
-        }
-        console.log("连接成功！");
-        const userInfo = client.db("userInfo");
-        if (data.userName.indexOf("@") !== -1) {
-            userInfo
-                .collection("users")
-                .find({
-                    email: data.userName,
-                })
-                .toArray(function (err, resData) {
-                    console.log(resData);
-                    if (resData.length === 0) {
-                        res.send({
-                            status: 500,
-                            success: false,
-                            code: 2,
-                            // 用户名或邮箱错误
-                        });
-                        return;
-                    }
-                    if (resData[0].password !== data.password) {
-                        res.send({
-                            status: 500,
-                            success: false,
-                            code: 4,
-                            // 密码错误！
-                        });
-                        return;
-                    }
-                    delete resData[0].password;
-                    res.send({
-                        status: 200,
-                        success: true,
-                        data: resData,
-                    });
-                });
-        } else {
-            userInfo
-                .collection("users")
-                .find({
-                    userName: data.userName,
-                })
-                .toArray(function (err, resData) {
-                    if (resData.length === 0) {
-                        res.send({
-                            status: 500,
-                            success: false,
-                            code: 2,
-                            // 用户名或邮箱错误
-                        });
-                        return;
-                    }
-                    if (resData[0].password !== data.password) {
-                        res.send({
-                            status: 500,
-                            success: false,
-                            code: 4,
-                            // 密码错误！
-                        });
-                        return;
-                    }
-                    delete resData[0].password
-                    res.send({
-                        status: 200,
-                        success: true,
-                        data: resData[0],
-                    });
-                });
-        }
-    })
 });
 // 正在测试
 app.post('/api/home/addProject', function (req, res) {
@@ -532,7 +678,6 @@ app.get('/form', function(req, res, next){
 });
 app.listen(3000, function (err) {
     if (err) {
-        console.log(err);
         return;
     }
     console.log("服务已启动");
